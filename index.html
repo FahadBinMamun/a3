@@ -77,12 +77,9 @@
 
                 <section class="card p-6 rounded-2xl shadow-lg">
                     <h3 class="text-2xl font-bold mb-4 text-center text-rose-500">রিপোর্ট শেয়ার করো</h3>
-                    <p class="text-center text-gray-600 mb-4">তোমার অগ্রগতি দেখানোর জন্য, নিচের বাটনটি ক্লিক করে যে কোডটি আসবে, সেটি কপি করে তোমার 🦁-কে পাঠিয়ে দাও।</p>
-                    <button id="generate-share-code-btn" class="mx-auto block bg-rose-500 hover:bg-rose-600 text-white font-bold py-2 px-6 rounded-lg">শেয়ার কোড তৈরি করো</button>
-                    <div id="share-code-area" class="hidden mt-4">
-                        <textarea id="share-code-output" readonly class="w-full h-32 p-2 border rounded bg-gray-100 text-xs"></textarea>
-                        <button id="copy-code-btn" class="mt-2 bg-gray-600 hover:bg-gray-700 text-white font-semibold py-1 px-4 rounded-lg text-sm">কপি করো</button>
-                    </div>
+                    <p class="text-center text-gray-600 mb-4">তোমার অগ্রগতি দেখানোর জন্য, নিচের কোডটি কপি করে তোমার 🦁-কে পাঠিয়ে দাও।</p>
+                    <textarea id="share-code-output" readonly class="w-full h-32 p-2 border rounded bg-gray-100 text-xs" placeholder="এখানে তোমার শেয়ার কোড তৈরি হবে..."></textarea>
+                    <button id="copy-code-btn" class="mt-2 bg-rose-500 hover:bg-rose-600 text-white font-semibold py-2 px-4 rounded-lg text-sm">কোড কপি করো</button>
                 </section>
             </div>
 
@@ -169,8 +166,6 @@
         const logFeedback = document.getElementById('log-feedback');
         const historySection = document.getElementById('history-section');
         const logHistory = document.getElementById('log-history');
-        const generateShareCodeBtn = document.getElementById('generate-share-code-btn');
-        const shareCodeArea = document.getElementById('share-code-area');
         const shareCodeOutput = document.getElementById('share-code-output');
         const copyCodeBtn = document.getElementById('copy-code-btn');
 
@@ -184,26 +179,15 @@
         const observerProgressBar = document.getElementById('observer-progress-bar');
         const observerLogHistory = document.getElementById('observer-log-history');
 
-        const DB_KEY = 'anannaChallengeData';
+        const DB_KEY = 'anannaChallengeData_v3'; // Using a new key to avoid conflict
 
         // --- Utility Functions ---
         const getTodayDateString = () => new Date().toISOString().split('T')[0];
-        const generateUUID = () => crypto.randomUUID();
 
         // --- Data Functions ---
         function getChallengeData() {
-            let data = localStorage.getItem(DB_KEY);
-            if (!data) {
-                data = {
-                    userId: generateUUID(),
-                    startDate: null,
-                    logs: {}
-                };
-                saveChallengeData(data);
-            } else {
-                data = JSON.parse(data);
-            }
-            return data;
+            const data = localStorage.getItem(DB_KEY);
+            return data ? JSON.parse(data) : { startDate: null, logs: {} };
         }
 
         function saveChallengeData(data) {
@@ -233,6 +217,7 @@
             observerView.classList.add('hidden');
             const data = getChallengeData();
             renderUserUI(data);
+            updateShareCode();
         }
 
         function setupObserverView() {
@@ -291,11 +276,19 @@
             });
         }
 
+        function updateShareCode() {
+            const data = getChallengeData();
+            const jsonString = JSON.stringify(data);
+            const encodedData = btoa(jsonString); // Using Base64 for robustness
+            shareCodeOutput.value = encodedData;
+        }
+
         startChallengeBtn.addEventListener('click', () => {
             const data = getChallengeData();
             data.startDate = new Date().toISOString();
             saveChallengeData(data);
             renderUserUI(data);
+            updateShareCode();
         });
 
         logTodayBtn.addEventListener('click', () => {
@@ -311,20 +304,19 @@
             logFeedback.textContent = `তোমার আজকের রেকর্ড (${count} বার) জমা হয়েছে। আমি খুব খুশি!`;
             logFeedback.classList.remove('text-red-500');
             renderLogHistory(data.logs, logHistory);
+            updateShareCode();
             setTimeout(() => { logFeedback.textContent = ''; }, 3000);
         });
         
-        generateShareCodeBtn.addEventListener('click', () => {
-            const data = getChallengeData();
-            const jsonString = JSON.stringify(data);
-            const encodedData = btoa(jsonString); // Base64 encoding
-            shareCodeOutput.value = encodedData;
-            shareCodeArea.classList.remove('hidden');
-        });
-
         copyCodeBtn.addEventListener('click', () => {
+            if (!shareCodeOutput.value) {
+                alert("শেয়ার করার জন্য কোনো কোড তৈরি হয়নি।");
+                return;
+            }
             shareCodeOutput.select();
             document.execCommand('copy');
+            copyCodeBtn.textContent = "কপি হয়েছে!";
+            setTimeout(() => { copyCodeBtn.textContent = "কোড কপি করো"; }, 2000);
         });
 
         // --- Observer UI Logic ---
@@ -335,10 +327,10 @@
                 return;
             }
             try {
-                const jsonString = atob(encodedData); // Base64 decoding
+                const jsonString = atob(encodedData); // Using Base64 for robustness
                 const data = JSON.parse(jsonString);
 
-                if (!data.startDate || !data.logs) {
+                if (typeof data.startDate === 'undefined' || typeof data.logs === 'undefined') {
                     throw new Error("Invalid data format");
                 }
 
@@ -349,11 +341,15 @@
 
             } catch (e) {
                 console.error(e);
-                observerError.textContent = 'কোডটি সঠিক নয়। আবার চেষ্টা করো।';
+                observerError.textContent = 'কোডটি সঠিক নয়। পুরোটা কপি হয়েছে কি?';
             }
         });
 
         function renderObserverReport(data) {
+            if (!data.startDate) {
+                observerReportView.innerHTML = '<p class="text-center text-gray-700">সে এখনও চ্যালেঞ্জ শুরু করেনি।</p>';
+                return;
+            }
             const startDate = new Date(data.startDate);
             const now = new Date();
             const diffTime = Math.abs(now - startDate);
@@ -370,4 +366,3 @@
     </script>
 </body>
 </html>
-
