@@ -36,7 +36,7 @@
     <!-- PIN Screen -->
     <div id="pin-screen" class="pin-container">
         <div class="card p-8 rounded-2xl shadow-xl text-center max-w-sm mx-auto">
-            <h2 class="text-2xl font-bold mb-4 text-gray-700">Hi Doraemon <br>তোমার জন্য বানানো...</h2>
+            <h2 class="text-2xl font-bold mb-4 text-gray-700">Hi ডরাএমন 🦁 <br>তোমার জন্য বানানো...</h2>
             <p class="text-gray-600 mb-6">শুধু তোমার পিন নম্বরটি দিয়ে প্রবেশ করো</p>
             <input type="password" id="pin-input" class="w-full p-3 border border-gray-300 rounded-lg text-center text-lg tracking-widest focus:ring-2 focus:ring-rose-400 focus:border-transparent" placeholder="••••">
             <button id="enter-btn" class="mt-6 w-full bg-rose-500 hover:bg-rose-600 text-white font-bold py-3 px-8 rounded-lg transition duration-300 shadow-md">ভেতরে এসো</button>
@@ -50,8 +50,8 @@
             <!-- User View -->
             <div id="user-view" class="hidden space-y-8">
                 <header class="text-center">
-                    <h1 class="text-3xl md:text-4xl font-bold text-rose-600">আমার Ananna-র জন্য</h1>
-                    <p class="text-lg md:text-xl text-gray-700 mt-2">তোমার ওই মিষ্টি ঠোঁট দুটোর জন্য</p>
+                    <h1 class="text-3xl md:text-4xl font-bold text-rose-600">আমার Ananna-র জন্য 🦁</h1>
+                    <p class="text-lg md:text-xl text-gray-700 mt-2">তোমার মিষ্টি ঠোঁট দুটোর জন্য</p>
                 </header>
                 
                 <section id="challenge-section" class="card p-6 rounded-2xl shadow-lg text-center">
@@ -63,7 +63,7 @@
                     <div id="active-challenge-state" class="hidden">
                         <h2 id="challenge-day-text" class="text-2xl md:text-3xl font-bold text-teal-600 mb-4"></h2>
                         <div class="w-full bg-gray-200 rounded-full h-4 mb-6"><div id="progress-bar" class="bg-teal-500 h-4 rounded-full"></div></div>
-                        <label for="bite-count" class="block text-lg font-medium mb-2">আজ কতবার কষ্ট দিয়েছো ঠোঁট দুটোকে?</label>
+                        <label for="bite-count" class="block text-lg font-medium mb-2">আজ কতবার অকাম করছো ঠোঁট নিয়ে?</label>
                         <input type="number" id="bite-count" min="0" class="w-full max-w-xs mx-auto p-3 border border-gray-300 rounded-lg text-center text-lg focus:ring-2 focus:ring-teal-500" placeholder="সংখ্যা লিখুন">
                         <button id="log-today-btn" class="mt-4 bg-blue-500 hover:bg-blue-600 text-white font-bold py-3 px-8 rounded-lg transition">জমা দাও</button>
                         <p id="log-feedback" class="mt-2 text-sm text-green-600 h-4"></p>
@@ -75,7 +75,7 @@
                     <div id="log-history" class="space-y-3 max-h-60 overflow-y-auto pr-2"></div>
                 </section>
 
-                <section class="card p-6 rounded-2xl shadow-lg">
+                <section id="share-section" class="card p-6 rounded-2xl shadow-lg hidden">
                     <h3 class="text-2xl font-bold mb-4 text-center text-rose-500">রিপোর্ট শেয়ার করো</h3>
                     <p class="text-center text-gray-600 mb-4">তোমার অগ্রগতি দেখানোর জন্য, নিচের কোডটি কপি করে তোমার 🦁-কে পাঠিয়ে দাও।</p>
                     <textarea id="share-code-output" readonly class="w-full h-32 p-2 border rounded bg-gray-100 text-xs" placeholder="এখানে তোমার শেয়ার কোড তৈরি হবে..."></textarea>
@@ -166,6 +166,7 @@
         const logFeedback = document.getElementById('log-feedback');
         const historySection = document.getElementById('history-section');
         const logHistory = document.getElementById('log-history');
+        const shareSection = document.getElementById('share-section');
         const shareCodeOutput = document.getElementById('share-code-output');
         const copyCodeBtn = document.getElementById('copy-code-btn');
 
@@ -179,7 +180,7 @@
         const observerProgressBar = document.getElementById('observer-progress-bar');
         const observerLogHistory = document.getElementById('observer-log-history');
 
-        const DB_KEY = 'anannaChallengeData_v3'; // Using a new key to avoid conflict
+        const DB_KEY = 'anannaChallengeData_v4_final'; // Using a new key to avoid conflict
 
         // --- Utility Functions ---
         const getTodayDateString = () => new Date().toISOString().split('T')[0];
@@ -217,7 +218,6 @@
             observerView.classList.add('hidden');
             const data = getChallengeData();
             renderUserUI(data);
-            updateShareCode();
         }
 
         function setupObserverView() {
@@ -231,6 +231,7 @@
                 startState.classList.add('hidden');
                 activeChallengeState.classList.remove('hidden');
                 historySection.classList.remove('hidden');
+                shareSection.classList.remove('hidden');
                 
                 const startDate = new Date(data.startDate);
                 const now = new Date();
@@ -245,11 +246,13 @@
                 const todayStr = getTodayDateString();
                 biteCountInput.value = data.logs[todayStr] || '';
                 renderLogHistory(data.logs, logHistory);
+                updateShareCode();
 
             } else {
                 startState.classList.remove('hidden');
                 activeChallengeState.classList.add('hidden');
                 historySection.classList.add('hidden');
+                shareSection.classList.add('hidden');
             }
         }
 
@@ -279,7 +282,7 @@
         function updateShareCode() {
             const data = getChallengeData();
             const jsonString = JSON.stringify(data);
-            const encodedData = btoa(jsonString); // Using Base64 for robustness
+            const encodedData = btoa(unescape(encodeURIComponent(jsonString)));
             shareCodeOutput.value = encodedData;
         }
 
@@ -288,7 +291,6 @@
             data.startDate = new Date().toISOString();
             saveChallengeData(data);
             renderUserUI(data);
-            updateShareCode();
         });
 
         logTodayBtn.addEventListener('click', () => {
@@ -304,7 +306,7 @@
             logFeedback.textContent = `তোমার আজকের রেকর্ড (${count} বার) জমা হয়েছে। আমি খুব খুশি!`;
             logFeedback.classList.remove('text-red-500');
             renderLogHistory(data.logs, logHistory);
-            updateShareCode();
+            updateShareCode(); // *** THE FIX IS HERE ***
             setTimeout(() => { logFeedback.textContent = ''; }, 3000);
         });
         
@@ -327,7 +329,7 @@
                 return;
             }
             try {
-                const jsonString = atob(encodedData); // Using Base64 for robustness
+                const jsonString = decodeURIComponent(escape(atob(encodedData)));
                 const data = JSON.parse(jsonString);
 
                 if (typeof data.startDate === 'undefined' || typeof data.logs === 'undefined') {
@@ -366,3 +368,4 @@
     </script>
 </body>
 </html>
+
